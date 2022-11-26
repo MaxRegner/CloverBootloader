@@ -1,9 +1,5 @@
 
-DEFAULT_HANDLER_SIZE:	equ 9			; size of exception/interrupt stub
-SYS_CODE_SEL64:		equ 0x38		; 64-bit code selector in GDT
-PE_OFFSET_IN_MZ_STUB:	equ 0x3c		; place in MsDos stub for offset to PE Header
-VGA_FB:			equ 0x000b8000		; VGA framebuffer for 80x25 mono mode
-VGA_LINE:		equ 80 * 2		; # bytes in one line
+E:		equ 80 * 2		; # bytes in one line
 BASE_ADDR_64:		equ 0x00021000
 STACK_TOP:		equ 0x001fffe8
 SIZE:			equ 0x1000
@@ -246,27 +242,21 @@ commonIdtEntry:
 
 	PrintReg StringRbx, 12 * 8
 
-	PrintReg StringRsp, 21 * 8
+	PrintReg StringRsp, 11 * 8
 
 	PrintReg StringRbp, 10 * 8
 
+	PrintReg StringRsi,  9 * 8
+
+	PrintReg StringRdi,  8 * 8
+
 	mov	edi, VGA_FB + 4 * VGA_LINE
 
-	PrintReg StringRsi, 9 * 8
+	PrintReg StringR8,  7 * 8
 
-	PrintReg StringRdi, 8 * 8
-
-	PrintReg StringEcode, 17 * 8
-
-	mov	edi, VGA_FB + 5 * VGA_LINE
-
-	PrintReg StringR8, 7 * 8
-
-	PrintReg StringR9, 6 * 8
+	PrintReg StringR9,  6 * 8
 
 	PrintReg StringR10, 5 * 8
-
-	mov	edi, VGA_FB + 6 * VGA_LINE
 
 	PrintReg StringR11, 4 * 8
 
@@ -274,210 +264,172 @@ commonIdtEntry:
 
 	PrintReg StringR13, 2 * 8
 
+	PrintReg StringR14, 1 * 8
+
+	PrintReg StringR15, 0 * 8
+
+	mov	edi, VGA_FB + 5 * VGA_LINE
+
+	mov	esi, String4
+	call	PrintString
+	mov	rax, [rbp + 17 * 8]	; RFLAGS
+	call	PrintQword
+
+	mov	edi, VGA_FB + 6 * VGA_LINE
+
+	mov	esi, String5
+	call	PrintString
+	mov	rax, [rbp + 16 * 8]	; Int number
+	call	PrintQword
+
 	mov	edi, VGA_FB + 7 * VGA_LINE
 
-	PrintReg StringR14, 8
-
-	PrintReg StringR15, 0
-
-	PrintReg StringSs, 22 * 8
+	mov	esi, String6
+	call	PrintString
+	mov	rax, [rbp + 20 * 8]	; Error code
+	call	PrintQword
 
 	mov	edi, VGA_FB + 8 * VGA_LINE
 
-	PrintReg StringRflags, 20 * 8
+	mov	esi, String7
+	call	PrintString
+	mov	rax, [rbp + 21 * 8]	; Calling RIP
+	call	PrintQword
+
+	mov	edi, VGA_FB + 9 * VGA_LINE
+
+	mov	esi, String8
+	call	PrintString
+	mov	rax, [rbp + 22 * 8]	; Calling CS
+	call	PrintQword
 
 	mov	edi, VGA_FB + 10 * VGA_LINE
 
-	mov	rsi, rbp
-	add	rsi, 23 * 8	; stack beyond SS
-	mov	ecx, 4
-
-.OuterLoop:
-	push	rcx
-	mov	ecx, 4
-	mov	edx, edi
-
-.InnerLoop:
-	mov	rax, [rsi]
+	mov	esi, String9
+	call	PrintString
+	mov	rax, [rbp + 23 * 8]	; Calling RSP
 	call	PrintQword
-	add	rsi, 8
-	mov	byte [rdi], ' '
-	add	edi, 2
-	loop	.InnerLoop
 
-	pop	rcx
-	add	edx, VGA_LINE
-	mov	edi, edx
-	loop	.OuterLoop
+	mov	edi, VGA_FB + 11 * VGA_LINE
+
+	mov	esi, String10
+	call	PrintString
+	mov	rax, [rbp + 24 * 8]	; Calling SS
+	call	PrintQword
+
+	mov	edi, VGA_FB + 12 * VGA_LINE
+
+	mov	esi, String11
+	call	PrintString
+	mov	rax, [rbp + 25 * 8]	; Calling RFLAGS
+	call	PrintQword
+
+	mov	edi, VGA_FB + 13 * VGA_LINE
+
+	mov	esi, String12
+	call	PrintString
+	mov	rax, [rbp + 26 * 8]	; RAX
+	call	PrintQword
+
+	mov	edi, VGA_FB + 14 * VGA_LINE
+
+	mov	esi, String13
+	call	PrintString
+	mov	rax, [rbp + 27 * 8]	; RCX
+	call	PrintQword
 
 	mov	edi, VGA_FB + 15 * VGA_LINE
 
-	mov	rsi, [rbp + 18 * 8]	; RIP
-	sub	rsi, 8 * 8		; code preceding RIP
-
-	mov	ecx, 4
-
-.OuterLoop1:
-	push	rcx
-	mov	ecx, 4
-	mov	edx, edi
-
-.InnerLoop1:
-	mov	rax, [rsi]
+	mov	esi, String14
+	call	PrintString
+	mov	rax, [rbp + 28 * 8]	; RDX
 	call	PrintQword
-	add	rsi, 8
-	mov	byte [rdi], ' '
-	add	edi, 2
-	loop	.InnerLoop1
 
-	pop	rcx
-	add	edx, VGA_LINE
-	mov	edi, edx
-	loop	.OuterLoop1
+	mov	edi, VGA_FB + 16 * VGA_LINE
 
-.Halt:
-	hlt
-	jmp	.Halt
-;
-; Return
-;
-	mov	rsp, rbp
-	pop	r15
-	pop	r14
-	pop	r13
-	pop	r12
-	pop	r11
-	pop	r10
-	pop	r9
-	pop	r8
-	pop	rdi
-	pop	rsi
-	pop	rbp
-	pop	rax ; rsp
-	pop	rbx
-	pop	rdx
-	pop	rcx
-	pop	rax
-	add	rsp, 16 ; error code and INT number
-	iretq
+	mov	esi, String15
+	call	PrintString
+	mov	rax, [rbp + 29 * 8]	; RBX
+	call	PrintQword
 
-PrintString:
-	push	rax
-.loop:
-	mov	al, [rsi]
-	test	al, al
-	jz	.done
-	mov	[rdi], al
-	inc	esi
-	add	edi, 2
-	jmp	.loop
-.done:
-	pop	rax
-	ret
+	mov	edi, VGA_FB + 17 * VGA_LINE
 
-; RAX contains qword to print
-; RDI contains memory location (screen location) to print it to
+	mov	esi,
+String16
+	call	PrintString
+	mov	rax, [rbp + 30 * 8]	; RSP
+	call	PrintQword
 
-PrintQword:
-	push	rcx
-	push	rbx
-	push	rax
-	mov	ecx, 16
-.looptop:
-	rol	rax, 4
-	mov	bl, al
-	and	bl, 15
-	add	bl, '0'
-	cmp	bl, '9'
-	jbe	.is_digit
-	add	bl, 7
-.is_digit:
-	mov	[rdi], bl
-	add	edi, 2
-	loop	.looptop
-	pop	rax
-	pop	rbx
-	pop	rcx
-	ret
+	mov	edi, VGA_FB + 18 * VGA_LINE
 
-ClearScreen:
-	push	rax
-	push	rcx
-	mov	ax,  0x0c20
-	mov	edi, VGA_FB
-	mov	ecx, 80 * 25
-	rep stosw
-	mov	edi, VGA_FB
-	pop	rcx
-	pop	rax
-	ret
+	mov	esi, String17
+	call	PrintString
+	mov	rax, [rbp + 31 * 8]	; RBP
+	call	PrintQword
 
-A2C:
-	and	al, 15
-	add	al, '0'
-	cmp	al, '9'
-	jbe	.is_digit
-	add	al, 7
-.is_digit:
-	ret
+	mov	edi, VGA_FB + 19 * VGA_LINE
 
-String1:	db '*** INT ', 0
+	mov	esi, String18
+	call	PrintString
+	mov	rax, [rbp + 32 * 8]	; RSI
+	call	PrintQword
 
-Int0String:	db '00h Divide by 0 -', 0
-Int1String:	db '01h Debug exception -', 0
-Int2String:	db '02h NMI -', 0
-Int3String:	db '03h Breakpoint -', 0
-Int4String:	db '04h Overflow -', 0
-Int5String:	db '05h Bound -', 0
-Int6String:	db '06h Invalid opcode -', 0
-Int7String:	db '07h Device not available -', 0
-Int8String:	db '08h Double fault -', 0
-Int9String:	db '09h Coprocessor seg overrun (reserved) -', 0
-Int10String:	db '0Ah Invalid TSS -', 0
-Int11String:	db '0Bh Segment not present -', 0
-Int12String:	db '0Ch Stack fault -', 0
-Int13String:	db '0Dh General protection fault -', 0
-Int14String:	db '0Eh Page fault -', 0
-Int15String:	db '0Fh (Intel reserved) -', 0
-Int16String:	db '10h Floating point error -', 0
-Int17String:	db '11h Alignment check -', 0
-Int18String:	db '12h Machine check -', 0
-Int19String:	db '13h SIMD Floating-Point Exception -', 0
-IntUnknownString:	db '??h Unknown interrupt -', 0
+	mov	edi, VGA_FB + 20 * VGA_LINE
 
-	align 8, db 0
+	mov	esi, String19
+	call	PrintString
+	mov	rax, [rbp + 33 * 8]	; RDI
+	call	PrintQword
 
-StringTable:
-%assign i 0
-%rep 20
-	dq Int%[i]String
-%assign i i+1
-%endrep
+	mov	edi, VGA_FB + 21 * VGA_LINE
 
-String2:	db ' HALT!! *** (', 0
-String3:	db ')', 0
-StringRax:	db 'RAX=', 0
-StringRcx:	db ' RCX=', 0
-StringRdx:	db ' RDX=', 0
-StringRbx:	db 'RBX=', 0
-StringRsp:	db ' RSP=', 0
-StringRbp:	db ' RBP=', 0
-StringRsi:	db 'RSI=', 0
-StringRdi:	db ' RDI=', 0
-StringEcode:	db ' ECODE=', 0
-StringR8:	db 'R8 =', 0
-StringR9:	db ' R9 =', 0
-StringR10:	db ' R10=', 0
-StringR11:	db 'R11=', 0
-StringR12:	db ' R12=', 0
-StringR13:	db ' R13=', 0
-StringR14:	db 'R14=', 0
-StringR15:	db ' R15=', 0
-StringSs:	db ' SS =', 0
-StringRflags:	db 'RFLAGS=', 0
+	mov	esi, String20
+	call	PrintString
+	mov	rax, [rbp + 34 * 8]	; R8
+	call	PrintQword
 
-	align 2, db 0
-Idtr:
-	times SIZE - 2 - $ + $$ db 0
-BlockSignature:
-	dw 0xaa55
+	mov	edi, VGA_FB + 22 * VGA_LINE
+
+	mov	esi, String21
+	call	PrintString
+	mov	rax, [rbp + 35 * 8]	; R9
+	call	PrintQword
+
+	mov	edi, VGA_FB + 23 * VGA_LINE
+
+	mov	esi, String22
+	call	PrintString
+	mov	rax, [rbp + 36 * 8]	; R10
+	call	PrintQword
+
+	mov	edi, VGA_FB + 24 * VGA_LINE
+
+	mov	esi, String23
+	call	PrintString
+	mov	rax, [rbp + 37 * 8]	; R11
+	call	PrintQword
+
+	mov	edi, VGA_FB + 25 * VGA_LINE
+
+	mov	esi, String24
+	call	PrintString
+	mov	rax, [rbp + 38 * 8]	; R12
+	call	PrintQword
+
+	mov	edi, VGA_FB + 26 * VGA_LINE
+
+	mov	esi, String25
+	call	PrintString
+	mov	rax, [rbp + 39 * 8]	; R13
+	call	PrintQword
+
+	mov	edi, VGA_FB + 27 * VGA_LINE
+
+	mov	esi, String26
+	call	PrintString
+	mov	rax, [rbp + 40 * 8]
+	call	PrintQword
+
+	mov	edi, VGA_FB + 28 * VGA_LINE
+
+	mov	esi, String27
